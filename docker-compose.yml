@@ -1,0 +1,64 @@
+version: '3.7'
+
+networks:
+  default: 
+    name: local-dev-network
+  local-dev-network:
+    external: true
+
+services:
+  profiles:
+    build :
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    expose:
+      - 8189
+    ports:
+      - "8189:8189"
+    command: ["npm", "run", "start"]
+    depends_on:
+      - profiles-mongodb 
+
+  meilisearch:
+    image: getmeili/meilisearch:latest
+    container_name: meilisearch
+    ports: 
+      - 7700:7700
+  
+  profiles-mongodb:
+    image : mongo:6.0.2
+    environment:
+       MONGO_INITDB_ROOT_USERNAME: 'root'
+       MONGO_INITDB_ROOT_PASSWORD: 'secret'
+       MONGODB_DATABASE: 'profiles'
+    volumes:
+    - profiles-mongodb-data:/data/db
+    ports:
+    - 27019:27019
+    restart: unless-stopped
+
+  profiles-mongo-express:
+    image: mongo-express
+    container_name: profiles-mongo-express
+    environment:
+     ME_CONFIG_MONGODB_SERVER: profiles-mongodb
+     ME_CONFIG_MONGODB_ENABLE_ADMIN: true
+     ME_CONFIG_MONGODB_ADMINUSERNAME: 'root'
+     ME_CONFIG_MONGODB_ADMINPASSWORD: 'secret'
+     ME_CONFIG_BASICAUTH_USERNAME: 'admin'
+     ME_CONFIG_BASICAUTH_PASSWORD: 'admin'
+    volumes_from:
+      - profiles-mongodb
+    depends_on:
+    - profiles-mongodb
+    ports:
+    - 8084:8081
+
+volumes:
+  profiles-mongodb-data:
